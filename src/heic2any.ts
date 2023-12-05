@@ -219,19 +219,21 @@ function heic2any({
 	quality = 0.92,
 	gifInterval = 0.4,
 	multiple = undefined,
+	buffer
 }: {
-	blob: Blob;
+	blob?: Blob;
 	multiple?: true;
 	toType?: string;
 	quality?: number;
 	gifInterval?: number;
+	buffer?: ArrayBuffer;
 }): Promise<Blob | Blob[]> {
 	return new Promise(
 		(
 			resolve,
 			reject: (reason: { code: number; message: string }) => void
 		) => {
-			if (!(blob instanceof Blob)) {
+			if (blob && !(blob instanceof Blob)) {
 				utils.error(`ERR_USER library only accepts BLOBs as input`);
 			}
 			if (typeof multiple !== "boolean") {
@@ -249,11 +251,10 @@ function heic2any({
 					`ERR_USER "gifInterval" parameter should be of type "number"`
 				);
 			}
-			const reader = new FileReader();
-			reader.onload = (e) => {
+
+			const handleBuffer = (buffer: ArrayBuffer) => {
 				let gifWidth = 0;
 				let gifHeight = 0;
-				const buffer = (e as any).target.result;
 				const otherImageType = utils.otherImageType(buffer);
 				if (otherImageType) {
 					return reject(
@@ -314,7 +315,17 @@ function heic2any({
 						reject(utils.error(e));
 					});
 			};
-			reader.readAsArrayBuffer(blob);
+
+			if (buffer) {
+				handleBuffer(buffer);
+			} else if(blob) {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					const buffer = (e as any).target.result;
+					handleBuffer(buffer);
+				};
+				reader.readAsArrayBuffer(blob);
+			}
 		}
 	);
 }
